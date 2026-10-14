@@ -1,4 +1,3 @@
-# converter.py
 
 def rgb_to_cmyk(r, g, b):
     if (r, g, b) == (0, 0, 0):
@@ -17,22 +16,22 @@ def cmyk_to_rgb(c, m, y, k):
     b=round(255*(1-y_n)*(1-k_n))
     return max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b))
 
-def rgb_to_hsv(r, g, b):
+def rgb_to_hsv(r, g, b, current_h=0):
     r_n, g_n, b_n = r/255.0, g/255.0, b/255.0
     cmax, cmin = max(r_n, g_n, b_n), min(r_n, g_n, b_n)
     diff = cmax-cmin
 
-    if diff==0:
-        h=0
-    elif cmax==r_n:
-        h=(60*((g_n-b_n)/diff)+360)%360
-    elif cmax==g_n:
-        h=(60*((b_n-r_n)/diff)+120)%360
+    if diff == 0:
+        h = current_h
+    elif cmax == r_n:
+        h = (60 * ((g_n - b_n) / diff) + 360) % 360
+    elif cmax == g_n:
+        h = (60 * ((b_n - r_n) / diff) + 120) % 360
     else:
-        h=(60*((r_n-g_n)/diff)+240)%360
+        h = (60 * ((r_n - g_n) / diff) + 240) % 360
 
-    s=0 if cmax==0 else (diff/cmax)*100
-    v=cmax*100
+    s = 0 if cmax == 0 else (diff / cmax) * 100
+    v = cmax * 100
     return round(h, 1), round(s, 1), round(v, 1)
 
 def hsv_to_rgb(h, s, v):

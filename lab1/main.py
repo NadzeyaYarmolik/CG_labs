@@ -26,7 +26,6 @@ class App(ctk.CTk):
         main_frame = ctk.CTkFrame(self)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Левая часть (2D Палитра + Спектр)
         left_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         left_frame.pack(side="left", fill="y", padx=10, pady=10)
 
@@ -40,7 +39,6 @@ class App(ctk.CTk):
         self.hue_canvas.bind("<Button-1>", self.on_hue_click)
         self.hue_canvas.bind("<B1-Motion>", self.on_hue_click)
 
-        # Правая часть (Управление)
         right_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         right_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
@@ -54,7 +52,7 @@ class App(ctk.CTk):
         self._create_group(right_frame, "RGB Модель", [("R", "r", 0, 255), ("G", "g", 0, 255), ("B", "b", 0, 255)])
         self._create_group(right_frame, "CMYK Модель", [("C", "c", 0, 100), ("M", "m", 0, 100), ("Y", "y", 0, 100), ("K", "k", 0, 100)])
 
-        # HEX
+        
         hex_row = ctk.CTkFrame(right_frame, fg_color="transparent")
         hex_row.pack(fill="x", pady=2)
         ctk.CTkLabel(hex_row, text="HEX: #", width=50, anchor="e").pack(side="left")
@@ -64,7 +62,7 @@ class App(ctk.CTk):
         hex_entry.bind("<FocusOut>", lambda e: self.on_entry_change("hex"))
         self.entries["hex"] = hex_entry
 
-        # Пресеты
+        
         swatches_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
         swatches_frame.pack(fill="x", pady=(10, 0))
         preset_colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#00FFFF", "#FF00FF", "#FFFF00", "#808080", "#FFFFFF"]
@@ -107,7 +105,6 @@ class App(ctk.CTk):
             r, g, b = conv.hsv_to_rgb(hue, 100, 100)
             self.hue_canvas.create_line(0, y, 25, y, fill=f"#{r:02x}{g:02x}{b:02x}")
 
-    # Быстрая отрисовка через PIL (без лагов)
     def draw_sat_val_square(self):
         width, height = 220, 220
         img_data = bytearray(width * height * 3)
@@ -131,7 +128,7 @@ class App(ctk.CTk):
     def on_hue_click(self, event):
         y = max(0, min(220, event.y))
         self.current_h = (y / 220) * 360
-        _, s, v = conv.rgb_to_hsv(self.r, self.g, self.b)
+        _, s, v = conv.rgb_to_hsv(self.r, self.g, self.b, self.current_h)
         r, g, b = conv.hsv_to_rgb(self.current_h, s, v)
         self.update_all_from_rgb(r, g, b)
 
@@ -151,6 +148,8 @@ class App(ctk.CTk):
     def on_slider_change(self, active_key, value):
         if self.is_updating:
             return
+        if active_key == "h":
+            self.current_h = float(self.sliders["h"].get())
 
         if active_key in ["r", "g", "b"]:
             r = int(self.sliders["r"].get())
@@ -170,7 +169,6 @@ class App(ctk.CTk):
         else:
             return
 
-        # Передаем active_key, чтобы не сбрасывать ползунок, который сейчас держит пользователь
         self.update_all_from_rgb(r, g, b, skip_slider=active_key)
 
     def on_entry_change(self, changed_key):
@@ -207,7 +205,7 @@ class App(ctk.CTk):
         self.r, self.g, self.b = r, g, b
 
         c, m, y, k = conv.rgb_to_cmyk(r, g, b)
-        h, s, v = conv.rgb_to_hsv(r, g, b)
+        h, s, v = conv.rgb_to_hsv(r, g, b, self.current_h)
 
         if s > 0:
             self.current_h = h
@@ -233,7 +231,6 @@ class App(ctk.CTk):
             "c": c, "m": m, "y": y, "k": k
         }
         for key, val in values_num.items():
-            # Если мы тянем именно этот слайдер — пропускаем его обновление, чтобы он не прыгал
             if key in self.sliders and key != skip_slider:
                 self.sliders[key].set(val)
 
