@@ -100,7 +100,6 @@ public class ImageProcessingApp extends JFrame {
                 }
             }
         } else if (methodIndex == 1) {
-            // Метод Оцу (автоматический глобальный порог)
             int threshold = calculateOtsuThreshold(grayImg);
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
@@ -110,7 +109,6 @@ public class ImageProcessingApp extends JFrame {
                 }
             }
         } else if (methodIndex == 2) {
-            // Выделение границ (Оператор Собеля)
             resImg = applySobelFilter(grayImg);
         }
 
