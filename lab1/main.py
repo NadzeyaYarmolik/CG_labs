@@ -16,6 +16,8 @@ class App(ctk.CTk):
 
         self.r, self.g, self.b = 0, 0, 0
         self.current_h = 0.0
+        self.current_s = 0.0
+        self.current_v = 0.0
         self.is_updating = False
 
         self._build_ui()
@@ -26,6 +28,7 @@ class App(ctk.CTk):
         main_frame = ctk.CTkFrame(self)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
+        # Левая часть (2D Палитра + Спектр)
         left_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         left_frame.pack(side="left", fill="y", padx=10, pady=10)
 
@@ -39,6 +42,7 @@ class App(ctk.CTk):
         self.hue_canvas.bind("<Button-1>", self.on_hue_click)
         self.hue_canvas.bind("<B1-Motion>", self.on_hue_click)
 
+        # Правая часть (Управление)
         right_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         right_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
@@ -52,7 +56,7 @@ class App(ctk.CTk):
         self._create_group(right_frame, "RGB Модель", [("R", "r", 0, 255), ("G", "g", 0, 255), ("B", "b", 0, 255)])
         self._create_group(right_frame, "CMYK Модель", [("C", "c", 0, 100), ("M", "m", 0, 100), ("Y", "y", 0, 100), ("K", "k", 0, 100)])
 
-        
+        # HEX
         hex_row = ctk.CTkFrame(right_frame, fg_color="transparent")
         hex_row.pack(fill="x", pady=2)
         ctk.CTkLabel(hex_row, text="HEX: #", width=50, anchor="e").pack(side="left")
@@ -62,7 +66,7 @@ class App(ctk.CTk):
         hex_entry.bind("<FocusOut>", lambda e: self.on_entry_change("hex"))
         self.entries["hex"] = hex_entry
 
-        
+        # Пресеты
         swatches_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
         swatches_frame.pack(fill="x", pady=(10, 0))
         preset_colors = ["#000000", "#FF0000", "#00FF00", "#0000FF", "#00FFFF", "#FF00FF", "#FFFF00", "#808080", "#FFFFFF"]
@@ -128,16 +132,15 @@ class App(ctk.CTk):
     def on_hue_click(self, event):
         y = max(0, min(220, event.y))
         self.current_h = (y / 220) * 360
-        _, s, v = conv.rgb_to_hsv(self.r, self.g, self.b, self.current_h)
-        r, g, b = conv.hsv_to_rgb(self.current_h, s, v)
+        r, g, b = conv.hsv_to_rgb(self.current_h, self.current_s, self.current_v)
         self.update_all_from_rgb(r, g, b)
 
     def on_sv_click(self, event):
         x = max(0, min(220, event.x))
         y = max(0, min(220, event.y))
-        sat = (x / 220) * 100
-        val = (1 - (y / 220)) * 100
-        r, g, b = conv.hsv_to_rgb(self.current_h, sat, val)
+        self.current_s = (x / 220) * 100
+        self.current_v = (1 - (y / 220)) * 100
+        r, g, b = conv.hsv_to_rgb(self.current_h, self.current_s, self.current_v)
         self.update_all_from_rgb(r, g, b)
 
     def on_preset_click(self, hex_code):
@@ -148,28 +151,37 @@ class App(ctk.CTk):
     def on_slider_change(self, active_key, value):
         if self.is_updating:
             return
-        if active_key == "h":
-            self.current_h = float(self.sliders["h"].get())
 
-        if active_key in ["r", "g", "b"]:
+        # Фиксируем значения текущей модели напрямую из ползунков, чтобы они не сбрасывались
+        if active_key in ["h", "s", "v"]:
+            if active_key == "h": self.current_h = float(self.sliders["h"].get())
+            if active_key == "s": self.current_s = float(self.sliders["s"].get())
+            if active_key == "v": self.current_v = float(self.sliders["v"].get())
+            r, g, b = conv.hsv_to_rgb(self.current_h, self.current_s, self.current_v)
+        elif active_key in ["r", "g", "b"]:
             r = int(self.sliders["r"].get())
             g = int(self.sliders["g"].get())
             b = int(self.sliders["b"].get())
-        elif active_key in ["h", "s", "v"]:
-            h = float(self.sliders["h"].get())
-            s = float(self.sliders["s"].get())
-            v = float(self.sliders["v"].get())
-            r, g, b = conv.hsv_to_rgb(h, s, v)
+            self.current_h, self.current_s, self.current_v = conv.rgb_to_hsv(r, g, b, self.current_h)
         elif active_key in ["c", "m", "y", "k"]:
             c = float(self.sliders["c"].get())
             m = float(self.sliders["m"].get())
             y = float(self.sliders["y"].get())
             k = float(self.sliders["k"].get())
             r, g, b = conv.cmyk_to_rgb(c, m, y, k)
+            self.current_h, self.current_s, self.current_v = conv.rgb_to_hsv(r, g, b, self.current_h)
         else:
             return
 
-        self.update_all_from_rgb(r, g, b, skip_slider=active_key)
+        # Определяем, к какой группе относится ползунок, чтобы не перерисовывать его соседей по группе
+        group_keys = {
+            "h": ["h", "s", "v"], "s": ["h", "s", "v"], "v": ["h", "s", "v"],
+            "r": ["r", "g", "b"], "g": ["r", "g", "b"], "b": ["r", "g", "b"],
+            "c": ["c", "m", "y", "k"], "m": ["c", "m", "y", "k"], "y": ["c", "m", "y", "k"], "k": ["c", "m", "y", "k"]
+        }
+        skip_set = set(group_keys.get(active_key, []))
+
+        self.update_all_from_rgb(r, g, b, skip_sliders=skip_set)
 
     def on_entry_change(self, changed_key):
         if self.is_updating:
@@ -183,6 +195,7 @@ class App(ctk.CTk):
                 h = float(self.entries["h"].get().replace("°", "").replace("%", ""))
                 s = float(self.entries["s"].get().replace("%", ""))
                 v = float(self.entries["v"].get().replace("%", ""))
+                self.current_h, self.current_s, self.current_v = h, s, v
                 r, g, b = conv.hsv_to_rgb(h, s, v)
             elif changed_key in ["c", "m", "y", "k"]:
                 c = float(self.entries["c"].get().replace("%", ""))
@@ -200,15 +213,18 @@ class App(ctk.CTk):
         except ValueError:
             pass
 
-    def update_all_from_rgb(self, r, g, b, skip_slider=None):
+    def update_all_from_rgb(self, r, g, b, skip_sliders=None):
+        if skip_sliders is None:
+            skip_sliders = set()
+
         self.is_updating = True
         self.r, self.g, self.b = r, g, b
 
         c, m, y, k = conv.rgb_to_cmyk(r, g, b)
-        h, s, v = conv.rgb_to_hsv(r, g, b, self.current_h)
-
-        if s > 0:
-            self.current_h = h
+        
+        # Если это не ручной ввод из HSV, обновляем HSV из RGB
+        if not {"h", "s", "v"}.intersection(skip_sliders):
+            self.current_h, self.current_s, self.current_v = conv.rgb_to_hsv(r, g, b, self.current_h)
 
         self.draw_sat_val_square()
 
@@ -217,7 +233,7 @@ class App(ctk.CTk):
 
         values_txt = {
             "r": str(r), "g": str(g), "b": str(b),
-            "h": f"{h:.1f}°", "s": f"{s:.1f}%", "v": f"{v:.1f}%",
+            "h": f"{self.current_h:.1f}°", "s": f"{self.current_s:.1f}%", "v": f"{self.current_v:.1f}%",
             "c": f"{c:.1f}%", "m": f"{m:.1f}%", "y": f"{y:.1f}%", "k": f"{k:.1f}%",
             "hex": hex_val
         }
@@ -227,11 +243,11 @@ class App(ctk.CTk):
 
         values_num = {
             "r": r, "g": g, "b": b,
-            "h": h, "s": s, "v": v,
+            "h": self.current_h, "s": self.current_s, "v": self.current_v,
             "c": c, "m": m, "y": y, "k": k
         }
         for key, val in values_num.items():
-            if key in self.sliders and key != skip_slider:
+            if key in self.sliders and key not in skip_sliders:
                 self.sliders[key].set(val)
 
         self.is_updating = False
