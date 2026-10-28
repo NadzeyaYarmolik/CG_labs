@@ -14,7 +14,7 @@ public class ImageProcessingApp extends JFrame {
     private JComboBox<String> cbMethods;
 
     public ImageProcessingApp() {
-        setTitle("Lab 2 Вариант 14");
+        setTitle("Lab 2");
         setSize(950, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -44,7 +44,6 @@ public class ImageProcessingApp extends JFrame {
         controlPanel.add(btnApply);
         add(controlPanel, BorderLayout.NORTH);
 
-        // Панель для отображения картинок (До и После)
         JPanel imagesPanel = new JPanel(new GridLayout(1, 2, 10, 10));
         imagesPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -85,12 +84,10 @@ public class ImageProcessingApp extends JFrame {
         int width = originalImage.getWidth();
         int height = originalImage.getHeight();
         
-        // Создаем копию для результата в оттенках серого
         BufferedImage grayImg = toGrayscale(originalImage);
         BufferedImage resImg = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY);
 
         if (methodIndex == 0) {
-            // Фиксированный глобальный порог (например, 128)
             int threshold = 128;
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
